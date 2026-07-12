@@ -118,3 +118,65 @@ notify:
     url: ""
     # 通知级别，可选值: critical、active、timeSensitive、passive
     level: ""
+
+  # ---------- Telegram Bot ----------
+  telegram:
+    # 机器人的 Token
+    bot_token: ""
+    # 接收通知的用户或频道 ID
+    chat_id: ""
+    # 自定义 API 代理地址 (可选配置)
+    base_url: "https://api.telegram.org"
+
+  # ---------- 自定义 Webhook ----------
+  custom_webhook:
+    # Webhook 完整触发地址
+    url: ""
+    # HTTP 请求方法，支持 POST, GET, PUT
+    method: "POST"
+    # 自定义请求头 (键值对格式)。未指定 Content-Type 时，默认按 application/json 发送
+    headers:
+      Content-Type: "application/json"
+      # Authorization: "Bearer xxxxxxxx"
+    # 请求体模板。支持字典对象或纯字符串。
+    # 使用 {{message}} 作为推送内容的占位符，程序运行中会自动进行替换。
+    # 如果 HTTP 方法为 GET，此处的字典将作为 URL Param 参数拼接。
+    body_template:
+      msgtype: "text"
+      text:
+        content: "{{message}}"
+
+    # ===================================================
+    # 【配置示例 1：通过 GET 方法调用 Telegram API】
+    # ===================================================
+    # url: "https://api.telegram.org/bot1234567890:xxxxxx_xxx_xxxxxxxxxxxx/sendMessage"
+    # method: "GET"
+    # headers: {}
+    # body_template:
+    #   chat_id: "123456789"
+    #   text: "{{message}}"
+
+    # ===================================================
+    # 【配置示例 2：通过 POST 调用 OneBot V11 (QQ机器人) 并带 Token 鉴权】
+    # ===================================================
+    # url: "https://qqbot.yourdomain.com/send_private_msg"
+    # method: "POST"
+    # headers:
+    #   Content-Type: "application/json"
+    #   Authorization: "Bearer 1bg2xxxxxxxxxxxxxxxxxxFbwz"
+    # body_template:
+    #   user_id: 123456789
+    #   message: "{{message}}"
+
+    # ===================================================
+    # 【配置示例 3：通过 POST 调用钉钉群机器人 (依赖自定义关键词)】
+    # ===================================================
+    # 关键词设置提示：必须在钉钉群机器人的安全设置中，添加自定义关键词 "森空岛"。    
+    # url: "https://oapi.dingtalk.com/robot/send?access_token=31bbfxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx2c10"
+    # method: "POST"
+    # headers:
+    #   Content-Type: "application/json"
+    # body_template:
+    #   msgtype: "text"
+    #   text:
+    #     content: "{{message}}"

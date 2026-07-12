@@ -42,7 +42,8 @@ cp config.example.yaml config.yaml
 * **微信服务号**：通过公众号模板消息推送。
 * **Server 酱 (Turbo版/Server酱³ )**：通过微信/手机客户端推送。
 * **Bark**：通过 Bark App 推送到 iOS 设备，支持官方服务和自建 Bark Server。
-
+* **Telegram Bot**：通过 **Telegram** 机器人发送通知。
+* **自定义 Webhook**：支持 **GET** 与 **POST** 请求，便于自由接入目前未支持的通知渠道（如钉钉、飞书或其他自建服务）。
 ---
 
 ## 部署方法
