@@ -9,6 +9,9 @@
 * 或 Docker 环境
 > 如没有NAS或服务器环境，可以使用`GitHub Actions`签到，但海外网络存在触发森空岛风控的风险（目前未发现），另外使用 GitHub Actions 运行签到脚本存在违反 GitHub ToS 的风险，请谨慎使用并自行承担后果。
 
+## 关于风控
+部分用户反馈遇到`'code': 1903`报错，[数美官方文档](https://help.ishumei.com/docs/correction/openness/#34-%E9%A3%8E%E9%99%A9%E7%B1%BB%E5%9E%8B)未给出具体风控原因，推测和海外IP有关。目前加入了`随机睡眠延迟`和`设备指纹获取重试`来避免该问题，如调节上述两项参数仍遭遇风控问题，请尝试国内IP环境运行该脚本。
+
 ## 配置指南
 
 在使用前，请将目录下的 `config.example.yaml` 文件另存为 `config.yaml` 进行配置。
@@ -17,7 +20,6 @@
 # 拉取代码
 git clone https://github.com/kafuneri/Skland-Sign-In.git && cd Skland-Sign-In
 cp config.example.yaml config.yaml
-
 ```
 
 ### 1. 填写用户信息
@@ -35,15 +37,19 @@ cp config.example.yaml config.yaml
 
 本项目支持多种推送渠道，请在 `config.yaml` 的 `notify` 节点下配置：
 
-* **Qmsg 酱**：通过 QQ 发送通知。
-* **OneBot V11**：支持 NapCat、go-cqhttp 等协议，可推送至私聊或群聊。
+* **Qmsg 酱**：通过 QQ开放平台机器人 发送通知。
+* **OneBot V11**：支持 SnowLuma、NapCat、go-cqhttp 等，可推送至私聊或群聊。
 * **电子邮件 (SMTP)**：支持 QQ、网易等主流邮箱推送。
 * **企业微信**：通过群机器人 Webhook 推送。
 * **微信服务号**：通过公众号模板消息推送。
 * **Server 酱 (Turbo版/Server酱³ )**：通过微信/手机客户端推送。
 * **Bark**：通过 Bark App 推送到 iOS 设备，支持官方服务和自建 Bark Server。
 * **Telegram Bot**：通过 **Telegram** 机器人发送通知。
-* **自定义 Webhook**：支持 **GET** 与 **POST** 请求，便于自由接入目前未支持的通知渠道（如钉钉、飞书或其他自建服务）。
+* **钉钉群机器人**：通过钉钉自定义群机器人 Webhook推送，支持加签密钥。
+* **自定义 Webhook**：支持 **GET** 与 **POST** 请求，便于自由接入目前未支持的通知渠道。
+
+> 注意：请勿将真实的森空岛 Token、Webhook地址、加签密钥等敏感信息提交到公开仓库。
+
 ---
 
 ## 部署方法
@@ -58,7 +64,6 @@ cp config.example.yaml config.yaml
 
 ```bash
 docker compose up -d
-
 ```
 
 #### 使用 Docker Run
@@ -69,9 +74,7 @@ docker run -d \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
   -e TZ=Asia/Shanghai \
   kafuneri/skland-sign-in:latest
-
 ```
-
 
 ### 方案二：GitHub Actions 自动运行
 
@@ -84,28 +87,23 @@ docker run -d \
 
 > 注意：GitHub Actions 的 Cron 表达式使用 UTC 时间。默认工作流配置 `0 17 * * *` 对应北京时间次日 01:00。如需修改时间，请编辑 `.github/workflows/sign-in.yml` 中的 `schedule.cron`。
 
-
- 
 ### 方案三：源码运行
 
 1. 克隆本项目后安装依赖：
 ```bash
 pip install -r requirements.txt
-
 ```
-
 
 2. 执行签到脚本：
 ```bash
 python3 main.py
-
 ```
+
 脚本运行后会依次检查每个配置账号的签到状态：
 
 * 若未签到，则执行签到并获取奖励内容。
 * 若已签到，则跳过。
-* 运行结束后会输出简报，如果配置了相关通知渠道（如 Qmsg、Bark、邮件等），则会发送对应的推送通知。
-
+* 运行结束后会输出简报，如果配置了相关通知渠道（如 Qmsg、Bark、邮件、钉钉等），则会发送对应的推送通知。
 
 ---
 
@@ -115,8 +113,8 @@ python3 main.py
 若使用 GitHub Actions 部署，请修改 `.github/workflows/sign-in.yml` 中的 `schedule.cron`。<br>
 若源码运行，建议配合计划任务实现每日自动运行，网上教程很多，此处不赘述。
 
-## 运行截图  
-<img width="366" height="295" alt="image" src="https://github.com/user-attachments/assets/55ee4bbc-3f3a-4e63-8746-3dcbc059ff90" />
+## 运行截图
+<img width="295" height="241" alt="526ba948ca826f2771da71e05d460f88" src="https://github.com/user-attachments/assets/ea769358-c39d-42d8-8019-5f5d826453ef" />
 
 ## 感谢以下项目
 

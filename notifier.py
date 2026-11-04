@@ -1,7 +1,12 @@
 # notifier.py
+import base64
+import hashlib
+import hmac
 import httpx
 import logging
 import smtplib
+import time
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
@@ -54,6 +59,10 @@ class NotifierManager:
         telegram_cfg = notify_cfg.get("telegram", {})
         if telegram_cfg.get("bot_token") and telegram_cfg.get("chat_id"):
             self.notifiers.append(TelegramNotifier(telegram_cfg))
+
+        dingtalk_cfg = notify_cfg.get("dingtalk", {})
+        if dingtalk_cfg.get("webhook_url"):
+            self.notifiers.append(DingTalkNotifier(dingtalk_cfg))
         
         custom_webhook_cfg = notify_cfg.get("custom_webhook", {})
         if custom_webhook_cfg.get("url"):
@@ -443,6 +452,7 @@ class ServerChan3Notifier(BaseNotifier):
                     logger.error(f"[ServerChan3] 推送异常 -> {key[:8]}...: {e}")
                     all_success = False
         return all_success
+
 # ==================== Telegram Bot ====================
 class TelegramNotifier(BaseNotifier):
     name = "Telegram"
@@ -478,6 +488,97 @@ class TelegramNotifier(BaseNotifier):
             except Exception as e:
                 logger.error(f"[Telegram] 推送异常: {e}")
                 return False
+
+
+# ==================== 钉钉群机器人 ====================
+class DingTalkNotifier(BaseNotifier):
+    name = "DingTalk"
+
+    def __init__(self, cfg: dict):
+        self.webhook_url = (cfg.get("webhook_url") or "").strip()
+        self.secret = (cfg.get("secret") or "").strip()
+
+    def _build_signed_url(self) -> str:
+        """
+        钉钉加签规则：
+        stringToSign = timestamp + "\\n" + secret
+        sign = Base64(HMAC-SHA256(secret, stringToSign))
+        最终把 timestamp 和 sign 作为 URL query 参数发送。
+        """
+        if not self.secret:
+            return self.webhook_url
+
+        timestamp = str(round(time.time() * 1000))
+        string_to_sign = f"{timestamp}\n{self.secret}"
+
+        hmac_code = hmac.new(
+            self.secret.encode("utf-8"),
+            string_to_sign.encode("utf-8"),
+            digestmod=hashlib.sha256,
+        ).digest()
+        sign = base64.b64encode(hmac_code).decode("utf-8")
+
+        # 保留 Webhook 原有 access_token，并去掉可能残留的旧 timestamp/sign。
+        parts = urlsplit(self.webhook_url)
+        query = [
+            (key, value)
+            for key, value in parse_qsl(parts.query, keep_blank_values=True)
+            if key not in ("timestamp", "sign")
+        ]
+        query.extend([
+            ("timestamp", timestamp),
+            ("sign", sign),
+        ])
+
+        return urlunsplit((
+            parts.scheme,
+            parts.netloc,
+            parts.path,
+            urlencode(query),
+            parts.fragment,
+        ))
+
+    async def send(self, message: str) -> bool:
+        if not self.webhook_url:
+            logger.error("[DingTalk] 未配置 webhook_url")
+            return False
+
+        payload = {
+            "msgtype": "text",
+            "text": {
+                "content": message,
+            },
+        }
+
+        try:
+            url = self._build_signed_url()
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload, timeout=10)
+
+            try:
+                result = resp.json()
+            except Exception:
+                logger.error(
+                    f"[DingTalk] 推送失败: HTTP {resp.status_code} - 非 JSON 响应: {resp.text}"
+                )
+                return False
+
+            if resp.status_code == 200 and result.get("errcode") == 0:
+                logger.info("[DingTalk] 推送成功")
+                return True
+
+            logger.error(
+                "[DingTalk] 推送失败: HTTP %s, errcode=%s, errmsg=%s",
+                resp.status_code,
+                result.get("errcode"),
+                result.get("errmsg"),
+            )
+            return False
+        except Exception as e:
+            logger.error(f"[DingTalk] 推送异常: {e}")
+            return False
+
+
 # ==================== 自定义 Webhook ====================
 class CustomWebhookNotifier(BaseNotifier):
     name = "CustomWebhook"
@@ -538,4 +639,4 @@ class CustomWebhookNotifier(BaseNotifier):
                     return False
             except Exception as e:
                 logger.error(f"[CustomWebhook] 推送异常: {e}")
-                return False                
+                return False
